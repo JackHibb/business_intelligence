@@ -35,6 +35,11 @@ ui = page_navbar(
     layout_sidebar(
       sidebar = qc$sidebar(),
       card(
+        fill = FALSE,
+        card_header("SQL behind the current view"),
+        verbatimTextOutput("sql")
+      ),
+      card(
         full_screen = TRUE,
         card_header(textOutput("table_title", inline = TRUE)),
         DT::DTOutput("table")
@@ -81,6 +86,15 @@ be wrong, so check the SQL before you trust a number.
 
 server = function(input, output, session) {
   qc_vals = qc$server()
+
+  output$sql = renderText({
+    sql = qc_vals$sql()
+    if (is.null(sql) || !nzchar(sql)) {
+      "-- No filter applied yet; showing every row\nSELECT * FROM listings"
+    } else {
+      sql
+    }
+  })
 
   output$table_title = renderText(qc_vals$title() %||% "All listings")
 
