@@ -4,7 +4,7 @@
 
 A [querychat](https://github.com/posit-dev/querychat) app built for Assignment 05 in ISA 401 (Miami University). It rebuilds the class Job Scout Chat app on [Inside Airbnb](https://insideairbnb.com/get-the-data/) listings for Chicago, Columbus, and the Twin Cities, and is deployed to [Render](https://render.com) from this GitHub repository.
 
-**Live app:** (paste your Render URL here once it is deployed, for example `https://midwest-airbnb-chat-xxxx.onrender.com`)
+**Live app:** https://midwestairbnbchat.onrender.com
 
 ---
 
