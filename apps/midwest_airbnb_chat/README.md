@@ -4,7 +4,23 @@
 
 A [querychat](https://github.com/posit-dev/querychat) app built for Assignment 05 in ISA 401 (Miami University). It rebuilds the class Job Scout Chat app on [Inside Airbnb](https://insideairbnb.com/get-the-data/) listings for Chicago, Columbus, and the Twin Cities, and is deployed to [Render](https://render.com) from this GitHub repository.
 
-**Live app:** (paste your Render URL here once it is deployed, for example `https://midwest-airbnb-chat.onrender.com`)
+**Live app:** (paste your Render URL here once it is deployed, for example `https://midwest-airbnb-chat-xxxx.onrender.com`)
+
+---
+
+## Example Questions
+
+**1. Which Columbus neighbourhood has the priciest entire homes?**
+
+![Answer to question 1](screenshots/q1_columbus_priciest_entire_homes.png)
+
+**2. Do superhosts charge more per night than other hosts? Show it as a bar chart.**
+
+![Answer to question 2](screenshots/q2_superhost_price_bar_chart.png)
+
+**3. How many listings could host a party of ten?**
+
+![Answer to question 3](screenshots/q3_party_of_ten.png)
 
 ---
 
@@ -12,15 +28,10 @@ A [querychat](https://github.com/posit-dev/querychat) app built for Assignment 0
 
 The app connects to a SQLite database (`data/midwest_airbnb.db`), hands the `listings` table to querychat, and lets an LLM translate your question into SQL. It has two tabs:
 
-- **Explorer:** the chat sits in the sidebar. A **SQL behind the current view** panel shows the query that produced the table below it, so you can check the logic and reuse the SQL yourself.
-- **About:** what the app does, where the data comes from, and example questions.
+- **Explorer:** the chat sits in the sidebar. A SQL panel above the table always shows the SQL behind the latest answer, whether it filtered the table, answered in the chat, or drew a chart, so you can check the logic and reuse the SQL yourself.
+- **About:** the data source (Inside Airbnb), the three cities and their snapshot dates, and who built the app.
 
-The app uses a Bootstrap 5 theme from [bslib](https://rstudio.github.io/bslib/).
-
-**Example queries:**
-- "What is the median nightly price by city?"
-- "Which ten Chicago neighbourhoods have the most listings?"
-- "Show superhost listings in Columbus that sleep six or more."
+The app uses its own Bootstrap 5 theme from [bslib](https://rstudio.github.io/bslib/).
 
 ---
 
@@ -56,7 +67,7 @@ The app calls OpenAI (`gpt-5.6-luna (reasoning off)`) through [ellmer](https://e
 export OPENAI_API_KEY="your-api-key-here"
 ```
 
-For local runs, you can put `OPENAI_API_KEY=...` in a `.Renviron` file in this folder. On Render, add it under **Environment** as an environment variable named `OPENAI_API_KEY`. Never commit the key; `.Renviron` is listed in `.gitignore` for that reason.
+For local runs, put `OPENAI_API_KEY=...` in the project's `.Renviron` (at the root of `business_intelligence/`), then use **Session > Restart R** in RStudio. On Render, add it under **Environment** as an environment variable named `OPENAI_API_KEY`. Never commit the key to `app.R`, `.Renviron`, or this README; `.Renviron` is listed in `.gitignore` for that reason.
 
 ---
 
@@ -95,4 +106,4 @@ Then open http://localhost:7860.
 
 ## Course Information
 
-This application was developed for **ISA 401** at **Miami University**, starting from the class Job Scout Chat app. The polished version of the same idea, built on BLS wage data, is the [OEWS Jobs Explorer](https://huggingface.co/spaces/fmegahed/querychat_demo).
+Built by **Jack Hibbard** for **ISA 401** at **Miami University**, starting from the class Job Scout Chat app. The polished version of the same idea, built on BLS wage data, is the [OEWS Jobs Explorer](https://huggingface.co/spaces/fmegahed/querychat_demo).
