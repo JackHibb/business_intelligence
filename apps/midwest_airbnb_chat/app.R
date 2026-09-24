@@ -35,7 +35,7 @@ ui = page_navbar(
       sidebar = qc$sidebar(),
       card(
         fill = FALSE,
-        card_header("SQL behind the current view"),
+        card_header(textOutput("sql_header", inline = TRUE)),
         verbatimTextOutput("sql")
       ),
       card(
@@ -86,10 +86,37 @@ answers can be wrong, so check the SQL before you trust a number.
 server = function(input, output, session) {
   qc_vals = qc$server()
 
+  # Most recent SQL the model ran, from any tool: a table filter, a query
+  # answered in the chat, or a chart. Chat answers collapse their SQL by
+  # default, so this panel keeps it visible.
+  last_sql = reactiveVal(list(sql = NULL, source = NULL))
+
+  qc_vals$client$on_tool_request(function(request) {
+    args = request@arguments
+    source = switch(
+      request@name,
+      querychat_update_dashboard = "table filter",
+      querychat_query            = "chat answer",
+      querychat_visualize        = "chart",
+      querychat_reset_dashboard  = "reset",
+      NULL
+    )
+    if (identical(source, "reset")) {
+      last_sql(list(sql = NULL, source = NULL))
+    } else if (!is.null(source)) {
+      last_sql(list(sql = args$query %||% args$ggsql, source = source))
+    }
+  })
+
+  output$sql_header = renderText({
+    source = last_sql()$source
+    if (is.null(source)) "SQL behind the current view" else paste0("SQL behind the latest ", source)
+  })
+
   output$sql = renderText({
-    sql = qc_vals$sql()
+    sql = last_sql()$sql
     if (is.null(sql) || !nzchar(sql)) {
-      "-- No filter applied yet; showing every row\nSELECT * FROM listings"
+      "-- No question asked yet; showing every row\nSELECT * FROM listings"
     } else {
       sql
     }
