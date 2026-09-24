@@ -50,34 +50,34 @@ ui = page_navbar(
     card(
       card_header("About this app"),
       markdown("
-Ask a question in plain English about Airbnb listings in three Midwest markets.
+**Built by Jack Hibbard** for ISA 401 at Miami University.
+
+Ask a question in plain English about Airbnb listings in three Midwest cities.
 An LLM turns the question into SQL, runs it against a SQLite database, and
-shows the query so you can check the logic.
+shows the SQL above the table on the Explorer tab so you can check the logic.
 
-**Data.** The `listings` table in `data/midwest_airbnb.db`: 14,887 listings and
-29 columns from [Inside Airbnb](https://insideairbnb.com/get-the-data/):
+**Data source.** The listings come from [Inside Airbnb](https://insideairbnb.com/get-the-data/),
+which publishes snapshots of public Airbnb listings. This app uses the `listings`
+table in `data/midwest_airbnb.db`: 14,887 listings and 29 columns from three snapshots:
 
-| Market | Listings | Snapshot |
+| City | Listings | Snapshot date |
 |---|---|---|
 | Chicago | 7,439 | 2026-07-20 |
-| Twin Cities (Minneapolis-St. Paul metro) | 4,861 | 2026-07-21 |
 | Columbus | 2,587 | 2026-07-23 |
+| Twin Cities (Minneapolis-St. Paul metro) | 4,861 | 2026-07-21 |
 
 Only listings that showed a nightly price on the snapshot date are included.
 The full data dictionary is in `data/data_desc.md`.
 
 **Try asking:**
 
-- What is the median nightly price by city?
-- Which ten Chicago neighbourhoods have the most listings?
-- Show superhost listings in Columbus that sleep six or more.
+- Which Columbus neighbourhood has the priciest entire homes?
+- Do superhosts charge more per night than other hosts? Show it as a bar chart.
+- How many listings could host a party of ten?
 
 **How it works.** The chat uses [querychat](https://github.com/posit-dev/querychat)
-and [ellmer](https://ellmer.tidyverse.org/) with OpenAI's `gpt-5.6-luna`.
-Filtering the dashboard updates the table on the Explorer tab. LLM answers can
-be wrong, so check the SQL before you trust a number.
-
-**Course.** Built for ISA 401 at Miami University.
+and [ellmer](https://ellmer.tidyverse.org/) with OpenAI's `gpt-5.6-luna`. LLM
+answers can be wrong, so check the SQL before you trust a number.
       ")
     )
   )
