@@ -1,0 +1,249 @@
+---
+title: "Assignment 06: Airbnb Market Analysis with dplyr"
+author: "Jack Hibbard"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+options(pillar.sigfig = 6)
+```
+
+## Read the data
+
+```{r read-data}
+con = DBI::dbConnect(RSQLite::SQLite(), "../data/midwest_airbnb_extended.db")
+listings     = DBI::dbReadTable(con, "listings") |> tibble::as_tibble()
+availability = DBI::dbReadTable(con, "availability_monthly") |> tibble::as_tibble()
+reviews      = DBI::dbReadTable(con, "reviews_monthly") |> tibble::as_tibble()
+DBI::dbDisconnect(con)
+
+dplyr::glimpse(listings)
+```
+
+## Task 1
+
+Who owns the market: listings per `host_id` across all three cities, joined back to the listings.
+
+```{r task1}
+host_counts = listings |>
+  dplyr::count(host_id, name = "host_listings")
+
+listings_hosts = listings |>
+  dplyr::left_join(host_counts, by = "host_id") |>
+  dplyr::mutate(big_host = host_listings >= 10)
+
+# A1: hosts with 10 or more listings
+a1 = host_counts |>
+  dplyr::filter(host_listings >= 10) |>
+  dplyr::summarize(hosts_10_plus = dplyr::n())
+a1
+
+# A2 (and B2): percent of each city's listings held by those hosts
+task1_share = listings_hosts |>
+  dplyr::group_by(city) |>
+  dplyr::summarize(
+    listings = dplyr::n(),
+    big_host_listings = sum(big_host),
+    pct_big_host = 100 * mean(big_host)
+  )
+task1_share
+```
+
+## Task 2
+
+Value for a family of four: well-reviewed entire homes that sleep at least 4.
+
+```{r task2}
+family_value = listings |>
+  dplyr::filter(
+    room_type == "Entire home/apt",
+    accommodates >= 4,
+    number_of_reviews >= 10,
+    review_scores_rating >= 4.8
+  ) |>
+  dplyr::mutate(price_per_person = price / accommodates) |>
+  dplyr::group_by(city, neighbourhood) |>
+  dplyr::summarize(
+    n_listings = dplyr::n(),
+    median_ppp = median(price_per_person),
+    .groups = "drop"
+  ) |>
+  dplyr::filter(n_listings >= 20)
+
+# A3: Columbus neighbourhood with the lowest median price per person
+family_value |>
+  dplyr::filter(city == "Columbus") |>
+  dplyr::arrange(median_ppp)
+```
+
+## Task 3
+
+What earns: medians by city and room type in one `summarize()` call with `dplyr::across()`.
+
+```{r task3}
+earnings = listings |>
+  dplyr::group_by(city, room_type) |>
+  dplyr::summarize(
+    dplyr::across(
+      c(price, reviews_per_month, estimated_revenue_l365d),
+      ~ median(.x, na.rm = TRUE),
+      .names = "median_{.col}"
+    ),
+    n_listings = dplyr::n(),
+    .groups = "drop"
+  )
+earnings
+
+# A4: median estimated revenue of Twin Cities entire homes
+earnings |>
+  dplyr::filter(city == "Twin Cities", room_type == "Entire home/apt") |>
+  dplyr::select(city, room_type, median_estimated_revenue_l365d)
+```
+
+## Task 4
+
+Concentration: share of each city's estimated revenue earned by its top 10 percent of listings.
+
+```{r task4}
+task4_share = listings |>
+  dplyr::group_by(city) |>
+  dplyr::arrange(dplyr::desc(estimated_revenue_l365d), .by_group = TRUE) |>
+  dplyr::mutate(
+    rank = dplyr::row_number(),
+    top10 = rank <= ceiling(0.10 * dplyr::n())
+  ) |>
+  dplyr::summarize(
+    listings = dplyr::n(),
+    top10_listings = sum(top10),
+    total_revenue = sum(estimated_revenue_l365d, na.rm = TRUE),
+    top10_revenue = sum(estimated_revenue_l365d[top10], na.rm = TRUE),
+    pct_revenue_top10 = 100 * top10_revenue / total_revenue
+  )
+
+# A5: Columbus row
+task4_share
+```
+
+## Task 5
+
+The year ahead: October 2026 availability for entire homes.
+
+```{r task5}
+october = listings |>
+  dplyr::filter(room_type == "Entire home/apt") |>
+  dplyr::select(id, city) |>
+  dplyr::inner_join(
+    availability |> dplyr::filter(month == "2026-10"),
+    by = "id"
+  ) |>
+  dplyr::mutate(mostly_taken = nights_available < 0.5 * nights_in_month)
+
+# A6 and A7: city with the lowest share of mostly-taken entire homes
+october |>
+  dplyr::group_by(city) |>
+  dplyr::summarize(
+    entire_homes = dplyr::n(),
+    share_mostly_taken = mean(mostly_taken),
+    n_mostly_taken = sum(mostly_taken)
+  ) |>
+  dplyr::mutate(pct_mostly_taken = 100 * share_mostly_taken) |>
+  dplyr::arrange(share_mostly_taken)
+```
+
+## Task 6
+
+Demand by season: reviews per city and month, July 2025 through June 2026.
+
+```{r task6}
+monthly_demand = reviews |>
+  dplyr::inner_join(listings |> dplyr::select(id, city), by = "id") |>
+  dplyr::filter(month >= "2025-07", month <= "2026-06") |>
+  dplyr::group_by(city, month) |>
+  dplyr::summarize(total_reviews = sum(reviews), .groups = "drop")
+
+# A8 and A9: Twin Cities busiest month and busiest-to-quietest ratio
+twin = monthly_demand |>
+  dplyr::filter(city == "Twin Cities") |>
+  dplyr::arrange(dplyr::desc(total_reviews))
+twin
+
+twin |>
+  dplyr::summarize(
+    busiest_month = month[which.max(total_reviews)],
+    busiest = max(total_reviews),
+    quietest_month = month[which.min(total_reviews)],
+    quietest = min(total_reviews),
+    ratio = busiest / quietest
+  )
+
+# All three cities for comparison
+monthly_demand |>
+  dplyr::group_by(city) |>
+  dplyr::summarize(
+    busiest_month = month[which.max(total_reviews)],
+    quietest_month = month[which.min(total_reviews)],
+    ratio = max(total_reviews) / min(total_reviews)
+  )
+```
+
+## Task 7
+
+The Superhost premium among entire homes with a known Superhost flag.
+
+```{r task7}
+superhost = listings |>
+  dplyr::filter(
+    room_type == "Entire home/apt",
+    host_is_superhost %in% c("t", "f")
+  ) |>
+  dplyr::group_by(city, host_is_superhost) |>
+  dplyr::summarize(
+    n_listings = dplyr::n(),
+    median_price = median(price, na.rm = TRUE),
+    median_rating = median(review_scores_rating, na.rm = TRUE),
+    .groups = "drop"
+  )
+superhost
+
+# Premium = superhost median price minus other-host median price (dollars)
+superhost |>
+  dplyr::group_by(city) |>
+  dplyr::summarize(
+    superhost_median_price = median_price[host_is_superhost == "t"],
+    other_median_price = median_price[host_is_superhost == "f"],
+    premium = superhost_median_price - other_median_price,
+    superhost_median_rating = median_rating[host_is_superhost == "t"],
+    other_median_rating = median_rating[host_is_superhost == "f"]
+  )
+```
+
+## Task 8
+
+What the join lost: listings with no rows in `availability`.
+
+```{r task8}
+no_calendar = listings |>
+  dplyr::anti_join(availability, by = "id")
+
+# A10
+no_calendar |>
+  dplyr::summarize(listings_without_availability = dplyr::n())
+
+# Which city loses the most
+no_calendar |>
+  dplyr::count(city, name = "lost_listings") |>
+  dplyr::arrange(dplyr::desc(lost_listings))
+```
+
+## B2 support: both shares for all three cities
+
+```{r b2}
+task1_share |>
+  dplyr::select(city, pct_big_host) |>
+  dplyr::inner_join(task4_share |> dplyr::select(city, pct_revenue_top10), by = "city")
+```
